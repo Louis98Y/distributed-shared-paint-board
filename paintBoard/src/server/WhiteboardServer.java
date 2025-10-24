@@ -10,6 +10,11 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.io.ByteArrayInputStream;
 
 import javax.imageio.ImageIO;
@@ -44,6 +49,9 @@ public class WhiteboardServer extends UnicastRemoteObject implements RemoteWhite
     private String manager;
     private List<String> permissionRequests;
     private ConcurrentHashMap<String, IClient> userClients;
+    
+    // Thread pool for handling user operations
+    private ExecutorService threadPool;
 
     /**
      * Constructor for the WhiteboardServer.
@@ -56,6 +64,19 @@ public class WhiteboardServer extends UnicastRemoteObject implements RemoteWhite
         messages = new ArrayList<>();
         permissionRequests = new ArrayList<>();
         userClients = new ConcurrentHashMap<>();
+        
+        // Initialize thread pool with core pool size 5, max pool size 20, and queue size 100
+        threadPool = new ThreadPoolExecutor(
+            5, // core pool size
+            20, // maximum pool size
+            60L, // keep alive time
+            TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(100), // queue capacity
+            Executors.defaultThreadFactory(),
+            new ThreadPoolExecutor.CallerRunsPolicy() // rejection policy
+        );
+        
+        System.out.println("Thread pool initialized with core size: 5, max size: 20, queue capacity: 100");
     }
 
     /**
@@ -68,9 +89,17 @@ public class WhiteboardServer extends UnicastRemoteObject implements RemoteWhite
      * @throws RemoteException
      */
     @Override
-    public synchronized void drawLine(int x1, int y1, int x2, int y2, Color color) throws RemoteException {
-        shapes.add(new Line(x1, y1, x2, y2, color));
-        broadcastDrawing();
+    public void drawLine(int x1, int y1, int x2, int y2, Color color) throws RemoteException {
+        threadPool.submit(() -> {
+            synchronized (this) {
+                shapes.add(new Line(x1, y1, x2, y2, color));
+                try {
+                    broadcastDrawing();
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     /**
@@ -83,9 +112,17 @@ public class WhiteboardServer extends UnicastRemoteObject implements RemoteWhite
      * @throws RemoteException
      */
     @Override
-    public synchronized void drawRectangle(int x, int y, int width, int height, Color color) throws RemoteException {
-        shapes.add(new Rectangle(x, y, width, height, color));
-        broadcastDrawing();
+    public void drawRectangle(int x, int y, int width, int height, Color color) throws RemoteException {
+        threadPool.submit(() -> {
+            synchronized (this) {
+                shapes.add(new Rectangle(x, y, width, height, color));
+                try {
+                    broadcastDrawing();
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     /**
@@ -97,9 +134,17 @@ public class WhiteboardServer extends UnicastRemoteObject implements RemoteWhite
      * @throws RemoteException
      */
     @Override
-    public synchronized void drawCircle(int x, int y, int radius, Color color) throws RemoteException {
-        shapes.add(new Circle(x, y, radius, color));
-        broadcastDrawing();
+    public void drawCircle(int x, int y, int radius, Color color) throws RemoteException {
+        threadPool.submit(() -> {
+            synchronized (this) {
+                shapes.add(new Circle(x, y, radius, color));
+                try {
+                    broadcastDrawing();
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     /**
@@ -112,9 +157,17 @@ public class WhiteboardServer extends UnicastRemoteObject implements RemoteWhite
      * @throws RemoteException
      */
     @Override
-    public synchronized void drawOval(int x, int y, int width, int height, Color color) throws RemoteException {
-        shapes.add(new Oval(x, y, width, height, color));
-        broadcastDrawing();
+    public void drawOval(int x, int y, int width, int height, Color color) throws RemoteException {
+        threadPool.submit(() -> {
+            synchronized (this) {
+                shapes.add(new Oval(x, y, width, height, color));
+                try {
+                    broadcastDrawing();
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     /**
@@ -127,9 +180,17 @@ public class WhiteboardServer extends UnicastRemoteObject implements RemoteWhite
      * @throws RemoteException
      */
     @Override
-    public synchronized void freeDraw(int x1, int y1, int x2, int y2, Color color) throws RemoteException {
-        shapes.add(new FreeDraw(x1, y1, x2, y2, color));
-        broadcastDrawing();
+    public void freeDraw(int x1, int y1, int x2, int y2, Color color) throws RemoteException {
+        threadPool.submit(() -> {
+            synchronized (this) {
+                shapes.add(new FreeDraw(x1, y1, x2, y2, color));
+                try {
+                    broadcastDrawing();
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     /**
@@ -140,9 +201,17 @@ public class WhiteboardServer extends UnicastRemoteObject implements RemoteWhite
      * @throws RemoteException
      */
     @Override
-    public synchronized void erase(int x, int y, int size) throws RemoteException {
-        shapes.add(new Eraser(x, y, size));
-        broadcastDrawing();
+    public void erase(int x, int y, int size) throws RemoteException {
+        threadPool.submit(() -> {
+            synchronized (this) {
+                shapes.add(new Eraser(x, y, size));
+                try {
+                    broadcastDrawing();
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     /**
@@ -154,9 +223,17 @@ public class WhiteboardServer extends UnicastRemoteObject implements RemoteWhite
      * @throws RemoteException
      */
     @Override
-    public synchronized void drawText(int x, int y, String text, Color color) throws RemoteException {
-        shapes.add(new Text(x, y, text, color));
-        broadcastDrawing();
+    public void drawText(int x, int y, String text, Color color) throws RemoteException {
+        threadPool.submit(() -> {
+            synchronized (this) {
+                shapes.add(new Text(x, y, text, color));
+                try {
+                    broadcastDrawing();
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     /**
@@ -164,18 +241,26 @@ public class WhiteboardServer extends UnicastRemoteObject implements RemoteWhite
      * @throws RemoteException
      */
     @Override
-    public synchronized void clearShapes() throws RemoteException {
-        shapes.clear();
-        for (IClient client : userClients.values()) {
-            try {
-                client.resetPaintPanel();
-            } catch (RemoteException e) {
-                e.printStackTrace();
+    public void clearShapes() throws RemoteException {
+        threadPool.submit(() -> {
+            synchronized (this) {
+                shapes.clear();
+                for (IClient client : userClients.values()) {
+                    try {
+                        client.resetPaintPanel();
+                    } catch (RemoteException e) {
+                        e.printStackTrace();
+                    }
+                }
+                
+                canvasImage = new SerializableBufferedImage(700, 600, BufferedImage.TYPE_INT_ARGB);
+                try {
+                    broadcastDrawing();
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
             }
-        }
-        
-        canvasImage = new SerializableBufferedImage(700, 600, BufferedImage.TYPE_INT_ARGB);
-        broadcastDrawing();
+        });
     }
 
     /**
@@ -184,14 +269,20 @@ public class WhiteboardServer extends UnicastRemoteObject implements RemoteWhite
      * @throws RemoteException
      */
     @Override
-    public synchronized void loadImage(byte[] imageBytes) throws RemoteException {
-        try {
-            this.canvasImage = new SerializableBufferedImage(ImageIO.read(new ByteArrayInputStream(imageBytes)));
-            shapes.clear();
-            broadcastDrawing();
-        } catch (IOException e) {
-            throw new RemoteException("Failed to load image", e);
-        }
+    public void loadImage(byte[] imageBytes) throws RemoteException {
+        threadPool.submit(() -> {
+            synchronized (this) {
+                try {
+                    this.canvasImage = new SerializableBufferedImage(ImageIO.read(new ByteArrayInputStream(imageBytes)));
+                    shapes.clear();
+                    broadcastDrawing();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     /**
@@ -418,6 +509,30 @@ public class WhiteboardServer extends UnicastRemoteObject implements RemoteWhite
         }
         removeUser(manager);
         manager = null;
+        
+        // Shutdown thread pool gracefully
+        shutdownThreadPool();
+    }
+    
+    /**
+     * Shuts down the thread pool gracefully.
+     */
+    private void shutdownThreadPool() {
+        if (threadPool != null && !threadPool.isShutdown()) {
+            threadPool.shutdown();
+            try {
+                if (!threadPool.awaitTermination(60, TimeUnit.SECONDS)) {
+                    threadPool.shutdownNow();
+                    if (!threadPool.awaitTermination(60, TimeUnit.SECONDS)) {
+                        System.err.println("Thread pool did not terminate");
+                    }
+                }
+            } catch (InterruptedException e) {
+                threadPool.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+            System.out.println("Thread pool shutdown completed");
+        }
     }
 
     /**
@@ -431,6 +546,12 @@ public class WhiteboardServer extends UnicastRemoteObject implements RemoteWhite
         try {
             // Initialize remote object
             WhiteboardServer wbserver = new WhiteboardServer();
+
+            // Add shutdown hook to gracefully shutdown thread pool
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                System.out.println("Shutting down server...");
+                wbserver.shutdownThreadPool();
+            }));
 
             // Get remote object registry
             Registry registry = LocateRegistry.createRegistry(serverPort);
